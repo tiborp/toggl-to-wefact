@@ -36,7 +36,7 @@ final class HistoryController
         }
         $csrf=$_SESSION['csrf'];$quotas=$_SESSION['toggl_quota']??[];
         $message=$_SESSION['invoice_message']??null;unset($_SESSION['invoice_message']);session_write_close();
-        $error??=null;try{$history=$this->repo->history();}catch(Throwable){$error='Lokale factuurhistorie kon niet worden gelezen.';$history=['invoices'=>[],'uncertain'=>[]];}
-        $this->view->page($this->config->get('APP_NAME','Toggl → WeFact'),'Factuurhistorie','Succesvolle facturen met laatst bekende WeFact-status, openstaande controles en afgesloten factuuracties.','/facturen',compact('history','message','error','csrf','quotas'));
+        $error??=null;try{$history=$this->repo->history(includeClosed: false);}catch(Throwable){$error='Lokale factuurhistorie kon niet worden gelezen.';$history=['invoices'=>[],'uncertain'=>[]];}
+        $this->view->page($this->config->get('APP_NAME','Toggl → WeFact'),'Factuurhistorie','Succesvolle facturen met laatst bekende WeFact-status en openstaande controles.','/facturen',compact('history','message','error','csrf','quotas'));
     }
 }

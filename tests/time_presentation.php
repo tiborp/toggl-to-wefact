@@ -39,7 +39,7 @@ ob_start();
 (new View(dirname(__DIR__).'/templates'))->page('Test','Historie','','/facturen',['history'=>$history,'message'=>null,'error'=>null]);
 $html=ob_get_clean();
 timeUiCheck(str_contains($html,'<td>27:18<small>Werkelijk: 27:18:47</small></td>')&&str_contains($html,'€ 2321,61'),'Historie toont geen menselijke/exacte waarde');
-// Successful Example Project concept precedes old failed attempts, with diagnostics collapsed.
+// Closed actions and their diagnostics are hidden; successful invoices and open warnings remain.
 $history['invoices'][0]['project_name']='Example Project';
 $history['invoices'][0]['wefact_invoice_code']='EXAMPLE-001';$history['invoices'][0]['wefact_invoice_id']='91001';
 $closed=['state'=>'cancelled','outcome'=>'rejected','created_at'=>'2026-10-12T09:20:00+00:00',
@@ -51,12 +51,12 @@ $render=static function(array $history):string {
     ob_start();(new View(dirname(__DIR__).'/templates'))->page('Test','Historie','','/facturen',['history'=>$history,'message'=>null,'error'=>null]);return ob_get_clean();
 };
 $html=$render($history);
-timeUiCheck(strpos($html,'>Facturen</h2>')<strpos($html,'EXAMPLE-001 / 91001')&&strpos($html,'EXAMPLE-001 / 91001')<strpos($html,'Afgesloten factuuracties'),'Succesvolle factuur niet boven historische mislukkingen');
+timeUiCheck(str_contains($html,'>Facturen</h2>')&&str_contains($html,'EXAMPLE-001 / 91001')&&!str_contains($html,'Afgesloten factuuracties'),'Factuur ontbreekt of afgesloten sectie zichtbaar');
 timeUiCheck(!str_contains($html,'id="open-actions-title"'),'Lege sectie handmatige controle zichtbaar');
-timeUiCheck(str_contains($html,'<details><summary>Mislukte factuuractie')&&!str_contains($html,'<details open')&&str_contains($html,'IgnoreDiscount ongeldig')&&str_contains($html,'&lt;veilig&gt;'),'Afgesloten audit niet inklapbaar/veilig');
+timeUiCheck(!str_contains($html,'Mislukte factuuractie')&&!str_contains($html,'IgnoreDiscount ongeldig')&&!str_contains($html,'Oude poging afgewezen'),'Afgesloten audit lekt naar UI');
 $history['uncertain']=[array_replace($closed,['state'=>'reconciliation_required','outcome'=>'unknown'])];
 $html=$render($history);
-timeUiCheck(strpos($html,'id="concept-invoices-title"')<strpos($html,'id="open-actions-title"')&&strpos($html,'id="open-actions-title"')<strpos($html,'id="closed-actions-title"')&&str_contains($html,'role="alert"'),'Open actie niet zichtbaar in juiste sectie');
+timeUiCheck(strpos($html,'id="concept-invoices-title"')<strpos($html,'id="open-actions-title"')&&!str_contains($html,'id="closed-actions-title"')&&str_contains($html,'role="alert"'),'Open actie niet zichtbaar in juiste sectie');
 $history['uncertain']=[array_replace($closed,['state'=>'cancelled','outcome'=>'created_review'])];
 $html=$render($history);
 timeUiCheck(!str_contains($html,'id="open-actions-title"')&&str_contains($html,'WeFact-aanmaak bevestigd · lokale controle vereist')&&str_contains($html,'entries blijven geblokkeerd'),'Bestaande created-review-waarschuwing verloren');

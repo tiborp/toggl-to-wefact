@@ -40,3 +40,5 @@ input:disabled { opacity: .45; }
 .confirmation-summary { display: grid; grid-template-columns: minmax(10rem, 1fr) 2fr; gap: .35rem 1rem; }
 .confirmation-summary dt { font-weight: 600; }
 .confirmation-summary dd { margin: 0; }
+
+.badge--pending { display: inline-block; background: #fff3cd; color: #704b00; border: 1px solid #e4c875; font-weight: 600; white-space: nowrap; }

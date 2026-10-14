@@ -124,7 +124,7 @@ $unchanged=statusProtected($pdo);
 statusCheck((new Specification($pdo))->find(1)['available'],'Remote observation broke historical specification');
 statusCheck(statusProtected($pdo)===$unchanged,'Historical view changed billing state');
 // Presentation remains literal: status 2 never becomes a derived Openstaand label.
-function statusHtml(array $remote): string { ob_start(); require dirname(__DIR__).'/templates/invoice_remote_status.php'; return ob_get_clean(); }
+function statusHtml(array $remote, ?int $creationStatus=null): string { $invoice=['wefact_status'=>$creationStatus]; ob_start(); require dirname(__DIR__).'/templates/invoice_remote_status.php'; return ob_get_clean(); }
 $base=$after;
 foreach ([0=>'Concept',2=>'Verzonden',3=>'Deels betaald',4=>'Betaald',8=>'Creditfactuur',9=>'Vervallen',88=>'Onbekend'] as $code=>$label) {
     $html=statusHtml(array_replace($base,['status_code'=>$code,'last_attempt_result'=>'success','sent_count'=>0]));
@@ -137,6 +137,37 @@ statusCheck(!str_contains(statusHtml(array_replace($base,['sent_at'=>null])),'Ve
 statusCheck(str_contains(statusHtml([]),'nog niet gecontroleerd') && str_contains(statusHtml([]),'Bij aanmaak: Concept'),'Initial state unclear');
 statusCheck(str_contains(statusHtml($base),'Laatste statuscontrole mislukt') && str_contains(statusHtml($base),'Verzonden'),'Previous status hidden after failure');
 
+// Pending dispatch is a presentation-only decision, never a payment or lifecycle transition.
+foreach ([
+    [[], 0, true],
+    [[], null, false],
+    [[], 4, false],
+    [['checked_at'=>null, 'status_code'=>null, 'last_attempt_result'=>'failed'], 0, true],
+    [['checked_at'=>'2026-10-14T12:00:00Z', 'status_code'=>0], 0, true],
+    [['checked_at'=>'2026-10-14T12:00:00Z', 'status_code'=>2, 'sent_count'=>0], 0, true],
+    [['checked_at'=>'2026-10-14T12:00:00Z', 'status_code'=>2, 'sent_count'=>1], 0, false],
+    [['checked_at'=>'2026-10-14T12:00:00Z', 'status_code'=>3, 'sent_count'=>0], 0, false],
+    [['checked_at'=>'2026-10-14T12:00:00Z', 'status_code'=>4, 'sent_count'=>0], 0, false],
+    [['checked_at'=>'2026-10-14T12:00:00Z', 'status_code'=>8, 'sent_count'=>0], 0, false],
+    [['checked_at'=>'2026-10-14T12:00:00Z', 'status_code'=>9, 'sent_count'=>0], 0, false],
+    [['checked_at'=>'2026-10-14T12:00:00Z', 'status_code'=>88, 'sent_count'=>0], 0, false],
+    [['checked_at'=>'2026-10-14T12:00:00Z', 'status_code'=>2], 0, false],
+    [['checked_at'=>'2026-10-14T12:00:00Z', 'status_code'=>2, 'sent_count'=>null], 0, false],
+    [['checked_at'=>'2026-10-14T12:00:00Z', 'status_code'=>2, 'sent_count'=>'0'], 0, false],
+    [['checked_at'=>'2026-10-14T12:00:00Z'], 0, false],
+    [['status_code'=>2, 'sent_count'=>0], 0, false],
+    [['checked_at'=>'', 'status_code'=>0], 0, false],
+] as [$remote, $creationStatus, $expected]) {
+    statusCheck(InvoiceStatusSnapshot::pendingDispatch($remote, $creationStatus)===$expected, 'Incorrect pending dispatch decision');
+    $display=array_replace(['sent_count'=>null, 'sent_at'=>null, 'status_code'=>null], $remote);
+    $html=statusHtml($display, $creationStatus);
+    statusCheck(substr_count($html,'>Te versturen</span>')===($expected ? 1 : 0), 'Pending badge missing, duplicated or guessed');
+}
+statusCheck(InvoiceStatusSnapshot::pendingDispatch(null, 0), 'Unchecked local concept must remain actionable');
+statusCheck(!InvoiceStatusSnapshot::pendingDispatch(null, null), 'Missing history must not imply pending');
+statusCheck(InvoiceStatusSnapshot::pendingDispatch(array_replace($base,['status_code'=>0,'last_attempt_result'=>'failed']),0), 'Failed refresh must retain pending from last successful snapshot');
+statusCheck(str_contains(statusHtml([],0),'nog niet gecontroleerd'), 'Fallback badge hid unchecked status');
+
 $temp=sys_get_temp_dir().'/status-config-'.bin2hex(random_bytes(6));mkdir($temp,0700);
 try {
     $config=new Config($temp);$view=new View(dirname(__DIR__).'/templates');$invoiceRepo=new InvoiceRepository($pdo);$calls=0;
@@ -145,6 +176,7 @@ try {
     ob_start();$controller->handle();$html=ob_get_clean();
     statusCheck($calls===0 && str_contains($html,'Status bijwerken') && str_contains($html,'EXAMPLE-NEW / 91001') && str_contains($html,'Urenspecificatie'),'History GET missing new number/link or invoked API');
     statusCheck(!str_contains($html,'fake-secret'),'Credential leaked to HTML');
+    statusCheck(str_contains($html,'badge badge--pending') && $calls===0, 'Pending badge triggered refresh or missing for unchecked local concept');
     TogglSession::open($config);$csrf=$_SESSION['csrf'];session_write_close();
     $_SERVER['REQUEST_METHOD']='POST';$_POST=['action'=>'refresh_status','csrf'=>'invalid'];
     ob_start();$controller->handle();$html=ob_get_clean();

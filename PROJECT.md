@@ -173,7 +173,7 @@ Migrations 001–013 vormen geordende geschiedenis. 005 vereenvoudigde entrydura
 
 Actieve entryregistraties blijven gefactureerd zolang niet expliciet released. Een gecontroleerd manual_deleted_test-concept bewaart factuur/snapshots/audit maar telt niet actief mee; alleen eigen entries/reserveringen worden vrijgegeven. Geen automatische detectie van handmatige remote-wijzigingen.
 
-Historie: succesvolle actieve Facturen, open Handmatige controle vereist, ondergeschikte Afgesloten factuuracties. Oude mislukte pogingen stellen latere succesvolle facturen niet ter discussie.
+De factuurpagina toont succesvolle actieve Facturen en open Handmatige controle vereist. Afgesloten factuuracties worden niet weergegeven of voor deze pagina opgehaald; de records blijven intern beschikbaar via InvoiceRepository::history() voor diagnose/audit en herstel. Oude mislukte pogingen stellen latere succesvolle facturen niet ter discussie.
 
 ### Handmatige WeFact-statuscontrole
 
@@ -184,6 +184,8 @@ RemoteStatusService hergebruikt conservatief de bestaande bronfingerprint (WeFac
 invoice_remote_status bewaart statuscode, substatus, actueel factuurnummer/datum, verzendteller/-datum, valuta, exacte integer-centbedragen, betaaldatum/vervaldatum en controlemetadata. Optionele afwezige waarden blijven null; onbruikbare verzendtellers/datums blijven onbekend. Ongeldige verplichte velden, identiteit of geldbedragen verwerpen de snapshot. WeFact-decimale geldwaarden worden vóór JSON-decoding als tekst behouden; ook creditbedragen worden zonder floats verwerkt.
 
 Primaire labels volgen uitsluitend Status: 0 Concept, 2 Verzonden, 3 Deels betaald, 4 Betaald, 8 Creditfactuur, 9 Vervallen, anders Onbekend. AmountOutstanding leidt nooit tot een alternatieve primaire status. Verzending is afzonderlijk: Sent>0 geregistreerd, Sent=0 geen registratie, ontbrekend/onbruikbaar onbekend; geldige SentDate wordt Nederlands weergegeven.
+
+De badge Te versturen wordt uitsluitend lokaal bepaald: laatste succesvolle Status=0, of Status=2 met Sent=0. Andere/onbekende/onvoldoende remote gegevens geven geen badge. Zonder succesvolle controle mag de expliciete aanmaaksnapshot Concept als fallback dienen; de melding dat de actuele status nog niet gecontroleerd is blijft zichtbaar. Een mislukte refresh verandert deze afleiding uit de laatste geldige snapshot niet.
 
 Elke geldige snapshot wordt afzonderlijk transactioneel opgeslagen. Een fout werkt alleen de pogingmetadata bij en bewaart de laatst geldige snapshot. Authenticatie/toegangs-/rate-limitproblemen stoppen verdere requests. Statusrefresh verandert nooit invoices.wefact_status=0, lifecycle, financiële snapshots, reservations, invoiced_entries of Toggl-tags. Ook een remote fout geeft niets lokaal vrij. /facturen toont de laatst bekende status, het actuele bekende nummer, controletijd en een subtiele foutmelding; Urenspecificatie blijft onafhankelijk beschikbaar.
 

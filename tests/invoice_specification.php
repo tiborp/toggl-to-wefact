@@ -88,7 +88,8 @@ ob_start(); require dirname(__DIR__).'/templates/invoices.php'; $historyHtml=ob_
 specCheck(str_contains($historyHtml, '/facturen/urenspecificatie?invoice_id=7'), 'History must link with local ID');
 $history = ['invoices'=>[], 'closed_invoices'=>[$invoice+['invoice_date'=>'2026-09-30', 'closed_at'=>'2026-10-01', 'closure_reason'=>'Example test closed']], 'uncertain'=>[], 'failed'=>[]];
 ob_start(); require dirname(__DIR__).'/templates/invoices.php'; $closedHtml=ob_get_clean();
-specCheck(str_contains($closedHtml, '/facturen/urenspecificatie?invoice_id=7'), 'Closed invoice must retain its specification link');
+specCheck(!str_contains($closedHtml, 'Afgesloten factuuracties') && !str_contains($closedHtml, '/facturen/urenspecificatie?invoice_id=7'), 'Closed section must remain hidden');
+specCheck($reader->find(7)['available'], 'Hidden closed invoice must retain its directly accessible historical specification');
 $long = Specification::build(array_replace($invoice, ['duration_seconds'=>89665, 'billed_duration_seconds'=>90000]), [array_replace($entry, ['duration_seconds'=>89665])]);
 specCheck($long['actual_seconds'] === 89665 && $long['groups'][0]['duration_seconds'] === 89665 && $long['invoice']['billed_duration_seconds'] === 90000, 'Long durations must preserve all seconds');
 echo "Invoice specification tests passed.\n";

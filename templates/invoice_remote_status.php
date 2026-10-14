@@ -7,6 +7,7 @@
 <?php else: ?>
 Actuele WeFact-status nog niet gecontroleerd.<small>Bij aanmaak: Concept</small>
 <?php endif; ?>
+<?php if (InvoiceStatusSnapshot::pendingDispatch($remote, $invoice['wefact_status'] ?? null)): ?><span class="badge badge--pending">Te versturen</span><?php endif; ?>
 <?php if (($remote['last_attempt_result'] ?? null) === 'failed'): ?>
 <small><?= ($remote['last_error_kind'] ?? null) === 'source_mismatch' ? 'Niet gecontroleerd: API-configuratie wijkt af.' : 'Laatste statuscontrole mislukt.' ?> Eerdere gegevens blijven behouden.</small>
 <?php endif; ?>

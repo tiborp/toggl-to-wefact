@@ -16,6 +16,20 @@ final class InvoiceStatusSnapshot
         };
     }
 
+    /**
+     * Use the last successful observation, even after a failed refresh. Only invoices never
+     * successfully checked may fall back to their explicitly stored concept-at-creation status.
+     */
+    public static function pendingDispatch(?array $remote, ?int $creationStatus): bool
+    {
+        if (($remote['checked_at'] ?? null) === null) {
+            return ($remote['status_code'] ?? null) === null && $creationStatus === 0;
+        }
+        if (!is_string($remote['checked_at']) || $remote['checked_at'] === '') { return false; }
+        return ($remote['status_code'] ?? null) === 0
+            || (($remote['status_code'] ?? null) === 2 && ($remote['sent_count'] ?? null) === 0);
+    }
+
     /** Required identity/status must be valid; absent optional values remain unknown, never zero. */
     public static function parse(array $row, string $identifier): array
     {

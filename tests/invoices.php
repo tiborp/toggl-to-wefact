@@ -219,7 +219,8 @@ invoiceReject(fn()=>$s['service']->confirm('other-rejected','owner',$s['hours'],
 invoiceCheck($before===$s['repo']->action('existing-unknown','owner')&&(int)$s['pdo']->query("SELECT count(*) FROM invoice_entry_reservations WHERE token_hash=".$s['pdo']->quote(hash('sha256','existing-unknown')))->fetchColumn()===1,'Bestaande onzekere blokkade aangetast');
 $history=$s['repo']->history();
 ob_start();(new View(dirname(__DIR__).'/templates'))->page('Test','Historie','','/facturen',['history'=>$history,'message'=>null,'error'=>null]);$html=ob_get_clean();
-invoiceCheck(str_contains($html,'Mislukte factuuractie')&&str_contains($html,'Description invalid')&&str_contains($html,'HTTP-status')&&str_contains($html,'geen HTTP-status'),'Historie verbergt uitkomst/diagnostiek van oude/nieuwe acties');
+invoiceCheck(!str_contains($html,'Mislukte factuuractie')&&!str_contains($html,'Description invalid')&&str_contains($html,'Handmatige controle vereist')&&str_contains($html,'geen HTTP-status'),'Afgesloten actie zichtbaar of open diagnostiek verdwenen');
+invoiceCheck(count($history['failed'])===1&&str_contains($history['failed'][0]['diagnostics_json'],'Description invalid'),'Afgesloten diagnostiek intern verloren');
 
 // Fractional-cent quarter splits must fail before prepare/claim/external write.
 $fraction=invoiceSetup();$fraction['projectService']->save('1','42','85.02');
@@ -270,7 +271,8 @@ invoiceCheck($deleted['repo']->action('delete-test','owner')===$actionBefore,'Or
 $e=(new LocalInvoiceStatus($deleted['pdo']))->annotate([$deleted['hours']['entries'][0]])[0];invoiceCheck(!TimeEntryStatus::isInvoiced($e)&&TimeEntryStatus::isBillable($e),'Verwijderd testconcept blokkeert nog');
 $h=$deleted['repo']->history();invoiceCheck($h['invoices']===[]&&count($h['closed_invoices'])===1,'Afgesloten concept niet behouden');
 ob_start();(new View(dirname(__DIR__).'/templates'))->page('Test','Historie','','/facturen',['history'=>$h,'message'=>null,'error'=>null]);$closedHtml=ob_get_clean();
-invoiceCheck(strpos($closedHtml,'Afgesloten factuuracties')<strpos($closedHtml,'[concept]12 / 12')&&str_contains($closedHtml,'Handmatig verwijderd testconcept'),'Concept niet in afgesloten historie');
+invoiceCheck(!str_contains($closedHtml,'Afgesloten factuuracties')&&!str_contains($closedHtml,'[concept]12 / 12'),'Afgesloten testconcept nog zichtbaar');
+invoiceCheck(!isset($deleted['repo']->history(includeClosed:false)['closed_invoices'])&&count($deleted['repo']->history()['closed_invoices'])===1,'Presentatiefilter verloor interne historie');
 invoiceReject(fn()=>$deleted['repo']->closeDeletedTest(1,'A','12','[concept]12',[123],'Opnieuw'));
 // Rebilling is possible in an isolated stub database, retaining both historical rows.
 $deleted['http']->response=new HttpResponse(200,'{"controller":"invoice","action":"add","status":"success","invoice":{"Identifier":99,"InvoiceCode":"[concept]99","Status":0,"Debtor":42,"AmountExcl":"21.25"}}');
@@ -328,7 +330,7 @@ try{
     invoiceCheck($tagCalls===1&&$s['pdo']->query('SELECT state FROM invoice_actions')->fetchColumn()==='succeeded','Tagfailure wijzigde succesvol factuurresultaat');
     $_SERVER['REQUEST_METHOD']='GET';$_POST=[];ob_start();(new HistoryController($config,$view,$s['repo']))->handle();$html=ob_get_clean();invoiceCheck(str_contains($html,'[concept]12')&&count($s['http']->writes)===1&&$s['http']->reads===0,'Historie gebruikt API');
     invoiceCheck(str_contains($html,'De factuur blijft succesvol')&&!str_contains($html,'stub-secret'),'Tagfailure niet apart/veilig getoond');
-    // Manual no-invoice closure remains visible with its reason and original date.
+    // Manual closure remains internal and does not reappear in the public history.
     $originalTimezone=date_default_timezone_get();date_default_timezone_set('Europe/Amsterdam');
     $manualHtml=(static function():string {
         $message='';$error='';
@@ -341,7 +343,7 @@ try{
         ob_start();require dirname(__DIR__).'/templates/invoices.php';return ob_get_clean();
     })();
     date_default_timezone_set($originalTimezone);
-    invoiceCheck(str_contains($manualHtml,'Handmatig gecontroleerd en afgesloten')&&str_contains($manualHtml,'13-10-2026 15:01')&&str_contains($manualHtml,'reserveringen van deze actie zijn vrijgegeven')&&str_contains($manualHtml,'&lt;controle&gt;'),'Handmatige afsluiting ontbreekt of wordt niet veilig getoond');
+    invoiceCheck(!str_contains($manualHtml,'Handmatig gecontroleerd en afgesloten')&&!str_contains($manualHtml,'Handmatig vastgesteld:')&&!str_contains($manualHtml,'Afgesloten factuuracties'),'Handmatige afsluiting hoort niet zichtbaar te zijn');
     // Cancel/back requires a fresh explicit preview, never recycling a closed confirmation.
     $cancelFixture=invoiceSetup();$cancelController=new ConfirmationController($config,$view,$cancelFixture['service'],$cancelFixture['repo']);
     TogglSession::open($config);$_SESSION['toggl_hours']=$cancelFixture['hours'];$_SESSION['invoice_preview']=$cancelFixture['state'];unset($_SESSION['invoice_tokens'],$_SESSION['invoice_confirmation']);session_write_close();
