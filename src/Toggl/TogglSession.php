@@ -9,7 +9,7 @@ final class TogglSession
 {
     public static function open(Config $config): void
     {
-        ini_set('session.save_path', dirname(__DIR__, 2) . '/storage');
+        ini_set('session.save_path', \App\Runtime\Storage::directory(dirname(__DIR__, 2)));
         session_start(['cookie_httponly' => true, 'cookie_samesite' => 'Strict', 'use_strict_mode' => true]);
         header('Cache-Control: no-store');
         $fingerprint = hash('sha256', $config->togglToken());

@@ -158,7 +158,7 @@ WeFact: vast HTTPS POST https://api.mijnwefact.nl/v2/, IPv4, geen redirects, tim
 
 ## SQLite, lifecycle en audit
 
-DB is autoritatief voor lokale facturatie. Database::connect vereist bestaand bestand (mode=rw), activeert foreign keys en busy_timeout=5000. Bootstrap controleert integrity, foreign keys en actueel schema; geen automatische init/migrate.
+DB is autoritatief voor lokale facturatie. Runtime/Storage maakt uitsluitend de afgeschermde runtime-map aan (0700), ook voor sessies zonder voorafgaande serverstart. Dit staat los van database-initialisatie. Database::connect vereist bestaand bestand (mode=rw), activeert foreign keys en busy_timeout=5000. Bootstrap controleert integrity, foreign keys en actueel schema; geen automatische init/migrate.
 
 Belangrijkste tabellen:
 - migrations: toegepaste versies.

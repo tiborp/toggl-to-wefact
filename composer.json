@@ -32,6 +32,7 @@
         "test": [
             "php tests/foundation.php",
             "php tests/runtime.php",
+            "php tests/runtime_storage.php",
             "php tests/recovery.php",
             "php tests/toggl.php",
             "php tests/time_entries.php",

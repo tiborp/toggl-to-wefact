@@ -14,7 +14,7 @@ final class LocalServer
      */
     public static function arguments(string $root): array
     {
-        $directory = $root . '/storage/logs';
+        $directory = Storage::directory($root) . '/logs';
         $log = $directory . '/php-error.log';
         $previous = umask(0077);
         try {

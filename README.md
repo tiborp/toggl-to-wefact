@@ -41,6 +41,8 @@ composer db:init -- --confirm-first-install
 chmod 700 storage
 ```
 
+De runtime-map `storage/` wordt waar nodig automatisch aangemaakt met afgeschermde rechten. Dit initialiseert geen database: daarvoor blijft het expliciete installatiecommando nodig.
+
 Commit `.env`, databases en back-ups nooit.
 
 ## Starten
