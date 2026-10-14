@@ -23,6 +23,7 @@
 <?php if ($path === '/wefact'): extract($data, EXTR_SKIP); require __DIR__ . '/wefact.php'; endif; ?>
 <?php if ($path === '/projecten'): extract($data, EXTR_SKIP); require __DIR__ . '/projects.php'; endif; ?>
 <?php if ($path === '/concept-bevestigen'): extract($data, EXTR_SKIP); require __DIR__ . '/confirmation.php'; endif; ?>
+<?php if ($path === '/facturen/urenspecificatie'): extract($data, EXTR_SKIP); require __DIR__ . '/specification.php'; endif; ?>
 <?php if ($path === '/facturen'): extract($data, EXTR_SKIP); require __DIR__ . '/invoices.php'; endif; ?>
 </section></main>
 <footer class="container">Toggl → WeFact · lokale facturatie-app</footer>

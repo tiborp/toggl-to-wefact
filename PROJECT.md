@@ -28,7 +28,7 @@ PHP 8.2+, Composer, PDO SQLite, curl, mbstring en bcmath. Server-side HTML, eenv
 | bin/admin.php, bin/migrate.php | Expliciet lokaal onderhoud; Composer-aliases in composer.json |
 | tests | PHP- en JS-regressies zonder live API |
 
-Actieve routes: /, /toggl, /wefact, /projecten, /uren, /factuur-preview, /concept-bevestigen en /facturen. /facturen is de historiepagina.
+Actieve routes: /, /toggl, /wefact, /projecten, /uren, /factuur-preview, /concept-bevestigen en /facturen. /facturen is de historiepagina. GET /facturen/urenspecificatie?invoice_id={lokaal-id} toont een uitsluitend lokale historische urenspecificatie.
 
 ## Configuratie en lokale veiligheid
 
@@ -174,6 +174,12 @@ Migrations 001–012 vormen geordende geschiedenis. 005 vereenvoudigde entrydura
 Actieve entryregistraties blijven gefactureerd zolang niet expliciet released. Een gecontroleerd manual_deleted_test-concept bewaart factuur/snapshots/audit maar telt niet actief mee; alleen eigen entries/reserveringen worden vrijgegeven. Geen automatische detectie van handmatige remote-wijzigingen.
 
 Historie: actieve Conceptfacturen, open Handmatige controle vereist, ondergeschikte Afgesloten factuuracties. Oude mislukte pogingen stellen latere succesvolle facturen niet ter discussie.
+
+### Lokale urenspecificatie
+
+Specification leest factuurcontext en de destijds opgeslagen billed_duration_seconds uit invoices, en oorspronkelijke omschrijvingen/exacte duration_seconds uit invoiced_entries. Ook released entries blijven onderdeel van hun oorspronkelijke factuurhistorie. De entryset wordt tegen invoice_actions.snapshot_json gecontroleerd en de som tegen de geregistreerde werkelijke projecttijd. Ontbrekende/inconsistente historie geeft een melding; geen reconstructie via actuele bronnen.
+
+Groepering gebruikt trim + mb_strtolower, met Werkzaamheden als lege omschrijving, zonder kwartier- of centverdeling. De detailpagina behoudt oorspronkelijke entries en toont geregistreerde en gefactureerde tijd afzonderlijk. Beschikbaarheid is onafhankelijk van actuele remote factuurstatus en lokale lifecycle. Deze GET-flow gebruikt geen sessie, API, mapping, tarief of factuurmutatie.
 
 ## Onderhoud en herstel
 

@@ -59,6 +59,8 @@ try {
     $history = new \App\Invoice\HistoryController($app['config'], $view, $invoiceRepo, $syncTags);
     $router->get('/facturen', fn () => $history->handle());
     $router->post('/facturen', fn () => $history->handle());
+    $specification = new \App\Invoice\SpecificationController($app['config'], $view, new \App\Invoice\Specification($app['pdo']));
+    $router->get('/facturen/urenspecificatie', fn () => $specification->handle());
     $router->dispatch($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);
 } catch (Throwable $error) {
     http_response_code(500);
