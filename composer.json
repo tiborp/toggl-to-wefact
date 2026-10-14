@@ -1,0 +1,49 @@
+{
+    "name": "local/toggl-wefact",
+    "description": "Lokale Toggl naar WeFact facturatie-app",
+    "type": "project",
+    "license": "MIT",
+    "require": {
+        "php": ">=8.2",
+        "ext-pdo": "*",
+        "ext-pdo_sqlite": "*",
+        "ext-curl": "*",
+        "ext-mbstring": "*",
+        "ext-bcmath": "*"
+    },
+    "require-dev": {
+        "ext-dom": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "src/"
+        }
+    },
+    "scripts": {
+        "migrate": "php bin/migrate.php",
+        "db:init": "php bin/admin.php init",
+        "db:backup": "php bin/admin.php backup",
+        "db:restore": "php bin/admin.php restore",
+        "db:reconcile": "php bin/admin.php reconcile",
+        "start": [
+            "Composer\\Config::disableProcessTimeout",
+            "@php bin/start.php"
+        ],
+        "test": [
+            "php tests/foundation.php",
+            "php tests/runtime.php",
+            "php tests/recovery.php",
+            "php tests/toggl.php",
+            "php tests/time_entries.php",
+            "php tests/wefact.php",
+            "php tests/project_mappings.php",
+            "php tests/preview.php",
+            "php tests/daily.php",
+            "php tests/quarter_hour.php",
+            "php tests/invoices.php",
+            "php tests/tag_sync.php",
+            "php tests/exact_duration_migration.php",
+            "php tests/time_presentation.php"
+        ]
+    }
+}
