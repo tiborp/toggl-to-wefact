@@ -21,7 +21,7 @@ foreach(['prepared','reconciliation_required']as$state){
 }
 $pdo->exec("INSERT INTO invoice_entry_reservations VALUES(123,'reconciliation_required')");
 $m=new Migrator($pdo,dirname(__DIR__).'/database/migrations');
-migrationCheck($m->migrate()===8 && $m->migrate()===0,'005 niet eenmalig/herhaalbaar');
+migrationCheck($m->migrate()===9 && $m->migrate()===0,'005 niet eenmalig/herhaalbaar');
 foreach(['invoices','invoiced_entries']as$table){
     $columns=$pdo->query('PRAGMA table_info('.$table.')')->fetchAll(PDO::FETCH_COLUMN,1);
     migrationCheck(in_array('duration_seconds',$columns,true)&&!in_array('billable_duration_seconds',$columns,true)&&!in_array('actual_duration_seconds',$columns,true),'Durationkolommen niet vereenvoudigd');

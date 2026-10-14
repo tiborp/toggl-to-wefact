@@ -14,9 +14,9 @@ function check(bool $condition, string $message): void {
 $pdo = new PDO('sqlite::memory:');
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 $migrator = new Migrator($pdo, dirname(__DIR__) . '/database/migrations');
-check($migrator->migrate() === 12, 'Eerste migration ontbreekt.');
+check($migrator->migrate() === 13, 'Eerste migration ontbreekt.');
 check($migrator->migrate() === 0, 'Migration is niet idempotent.');
-foreach (['projects', 'invoiced_entries', 'api_cache', 'migrations', 'wefact_debtors', 'wefact_cache_state', 'toggl_projects', 'project_mappings', 'toggl_project_sync'] as $table) {
+foreach (['projects', 'invoiced_entries', 'api_cache', 'migrations', 'wefact_debtors', 'wefact_cache_state', 'toggl_projects', 'project_mappings', 'toggl_project_sync', 'invoice_remote_status'] as $table) {
     $query = $pdo->prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?");
     $query->execute([$table]);
     check($query->fetchColumn() === $table, 'Tabel ontbreekt: ' . $table);

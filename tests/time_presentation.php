@@ -51,7 +51,7 @@ $render=static function(array $history):string {
     ob_start();(new View(dirname(__DIR__).'/templates'))->page('Test','Historie','','/facturen',['history'=>$history,'message'=>null,'error'=>null]);return ob_get_clean();
 };
 $html=$render($history);
-timeUiCheck(strpos($html,'Conceptfacturen')<strpos($html,'EXAMPLE-001 / 91001')&&strpos($html,'EXAMPLE-001 / 91001')<strpos($html,'Afgesloten factuuracties'),'Succesvolle factuur niet boven historische mislukkingen');
+timeUiCheck(strpos($html,'>Facturen</h2>')<strpos($html,'EXAMPLE-001 / 91001')&&strpos($html,'EXAMPLE-001 / 91001')<strpos($html,'Afgesloten factuuracties'),'Succesvolle factuur niet boven historische mislukkingen');
 timeUiCheck(!str_contains($html,'id="open-actions-title"'),'Lege sectie handmatige controle zichtbaar');
 timeUiCheck(str_contains($html,'<details><summary>Mislukte factuuractie')&&!str_contains($html,'<details open')&&str_contains($html,'IgnoreDiscount ongeldig')&&str_contains($html,'&lt;veilig&gt;'),'Afgesloten audit niet inklapbaar/veilig');
 $history['uncertain']=[array_replace($closed,['state'=>'reconciliation_required','outcome'=>'unknown'])];

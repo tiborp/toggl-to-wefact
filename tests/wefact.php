@@ -92,7 +92,7 @@ assertWeFactFailure(fn () => (new WeFactClient('test-secret-key', new WeFactStub
 
 $pdo = new PDO('sqlite::memory:', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
 $migrator = new Migrator($pdo, dirname(__DIR__) . '/database/migrations');
-assertWeFact($migrator->migrate() === 12 && $migrator->migrate() === 0, 'Migrations niet herhaalbaar');
+assertWeFact($migrator->migrate() === 13 && $migrator->migrate() === 0, 'Migrations niet herhaalbaar');
 $cache = new DebtorCache($pdo);
 $fingerprint = hash('sha256', 'test-secret-key');
 $client = new WeFactClient('test-secret-key', new WeFactStub([wefactPage([$company, $person])]));

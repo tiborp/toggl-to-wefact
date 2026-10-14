@@ -45,7 +45,8 @@
             "php tests/tag_sync.php",
             "php tests/exact_duration_migration.php",
             "php tests/time_presentation.php",
-            "php tests/invoice_specification.php"
+            "php tests/invoice_specification.php",
+            "php tests/invoice_status.php"
         ]
     }
 }

@@ -154,7 +154,7 @@ Toggl: vaste HTTPS-host, Basic Auth token:api_token, allowlisted routes, geen re
 
 Quotaheaders X-Toggl-Quota-Remaining/X-Toggl-Quota-Resets-In en Retry-After worden per scope in sessie verwerkt. HTTP 402/429 en bekende blokkades stoppen requests. Ontbrekende quota is onbekend. Free-uitgangspunt 30 requests/uur; geen globale quota-administratie over browsers/CLI's heen.
 
-WeFact: vast HTTPS POST https://api.mijnwefact.nl/v2/, IPv4, geen redirects, timeouts 5/20 seconden. Debtor/list is read-only ondanks POST; invoice/add is de enige WeFact-write. JSON/HTTP/API/responsevalidatie en veilige diagnostiek onderscheiden afwijzing, onbekende uitkomst en bevestigd succes. Geen blinde writeretries.
+WeFact: vast HTTPS POST https://api.mijnwefact.nl/v2/, IPv4, geen redirects, timeouts 5/20 seconden. Debtor/list en invoice/show zijn read-only ondanks POST; invoice/add is de enige WeFact-write. JSON/HTTP/API/responsevalidatie en veilige diagnostiek onderscheiden afwijzing, onbekende uitkomst en bevestigd succes. Geen blinde writeretries.
 
 ## SQLite, lifecycle en audit
 
@@ -169,11 +169,23 @@ Belangrijkste tabellen:
 - invoice_action_results, toggl_tag_sync_attempts, invoice_reconciliation_events: veilige technische/handmatige audit.
 - Fundament-/legacytabellen blijven bestaan waar migrations dat vereisen; geen alternatieve actuele configuratiebron.
 
-Migrations 001–012 vormen geordende geschiedenis. 005 vereenvoudigde entryduration; 007 lifecycle; 008 projectkwartieren; 009–011 tagsync/audit; 012 handmatige reconciliation. Toegepaste migrations nooit herschrijven.
+Migrations 001–013 vormen geordende geschiedenis. 005 vereenvoudigde entryduration; 007 lifecycle; 008 projectkwartieren; 009–011 tagsync/audit; 012 handmatige reconciliation; 013 afzonderlijke remote factuurstatus. Toegepaste migrations nooit herschrijven.
 
 Actieve entryregistraties blijven gefactureerd zolang niet expliciet released. Een gecontroleerd manual_deleted_test-concept bewaart factuur/snapshots/audit maar telt niet actief mee; alleen eigen entries/reserveringen worden vrijgegeven. Geen automatische detectie van handmatige remote-wijzigingen.
 
-Historie: actieve Conceptfacturen, open Handmatige controle vereist, ondergeschikte Afgesloten factuuracties. Oude mislukte pogingen stellen latere succesvolle facturen niet ter discussie.
+Historie: succesvolle actieve Facturen, open Handmatige controle vereist, ondergeschikte Afgesloten factuuracties. Oude mislukte pogingen stellen latere succesvolle facturen niet ter discussie.
+
+### Handmatige WeFact-statuscontrole
+
+GET /facturen leest uitsluitend lokale historie en invoice_remote_status. Een CSRF-beveiligde POST action=refresh_status doet per succesvolle actieve factuur één read-only invoice/show met het lokaal opgeslagen Identifier. InvoiceReadTransport en de bestaande CurlTransport/WeFactClient verzorgen deze read; geen retries, invoice/edit of andere nieuwe externe writes.
+
+RemoteStatusService hergebruikt conservatief de bestaande bronfingerprint (WeFact-key én Toggl-token), omdat historische registraties geen afzonderlijke WeFact-keyfingerprint bevatten. Een mismatch wordt zonder API-request overgeslagen. Afgesloten registraties en onzekere acties worden niet bevraagd.
+
+invoice_remote_status bewaart statuscode, substatus, actueel factuurnummer/datum, verzendteller/-datum, valuta, exacte integer-centbedragen, betaaldatum/vervaldatum en controlemetadata. Optionele afwezige waarden blijven null; onbruikbare verzendtellers/datums blijven onbekend. Ongeldige verplichte velden, identiteit of geldbedragen verwerpen de snapshot. WeFact-decimale geldwaarden worden vóór JSON-decoding als tekst behouden; ook creditbedragen worden zonder floats verwerkt.
+
+Primaire labels volgen uitsluitend Status: 0 Concept, 2 Verzonden, 3 Deels betaald, 4 Betaald, 8 Creditfactuur, 9 Vervallen, anders Onbekend. AmountOutstanding leidt nooit tot een alternatieve primaire status. Verzending is afzonderlijk: Sent>0 geregistreerd, Sent=0 geen registratie, ontbrekend/onbruikbaar onbekend; geldige SentDate wordt Nederlands weergegeven.
+
+Elke geldige snapshot wordt afzonderlijk transactioneel opgeslagen. Een fout werkt alleen de pogingmetadata bij en bewaart de laatst geldige snapshot. Authenticatie/toegangs-/rate-limitproblemen stoppen verdere requests. Statusrefresh verandert nooit invoices.wefact_status=0, lifecycle, financiële snapshots, reservations, invoiced_entries of Toggl-tags. Ook een remote fout geeft niets lokaal vrij. /facturen toont de laatst bekende status, het actuele bekende nummer, controletijd en een subtiele foutmelding; Urenspecificatie blijft onafhankelijk beschikbaar.
 
 ### Lokale urenspecificatie
 

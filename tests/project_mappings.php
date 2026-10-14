@@ -31,7 +31,7 @@ function project(int $id, string $name, bool $active = true): array { return ['i
 $pdo = new PDO('sqlite::memory:', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]);
 $pdo->exec('PRAGMA foreign_keys = ON');
 $migrator = new Migrator($pdo, dirname(__DIR__) . '/database/migrations');
-ensure($migrator->migrate() === 12 && $migrator->migrate() === 0, 'Migration niet herhaalbaar');
+ensure($migrator->migrate() === 13 && $migrator->migrate() === 0, 'Migration niet herhaalbaar');
 $projects = new ProjectRepository($pdo);
 $mappings = new MappingRepository($pdo);
 $cache = new DebtorCache($pdo);

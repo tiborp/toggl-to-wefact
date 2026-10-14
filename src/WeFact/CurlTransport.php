@@ -3,7 +3,7 @@ declare(strict_types=1);
 namespace App\WeFact;
 
 /** Sends WeFact JSON over HTTPS/IPv4 and reports transport uncertainty without automatic retries. */
-final class CurlTransport implements InvoiceTransport
+final class CurlTransport implements InvoiceTransport, InvoiceReadTransport
 {
     public function listDebtors(#[\SensitiveParameter] string $key, int $offset, int $limit): HttpResponse
     {
@@ -17,6 +17,14 @@ final class CurlTransport implements InvoiceTransport
     {
         if (($payload['Status'] ?? null) !== 0 || array_key_exists('InvoiceCode',$payload) || array_key_exists('Sent',$payload) || array_key_exists('SentDate',$payload)) { throw new WeFactException('Alleen conceptfacturen zijn toegestaan.', 'payload'); }
         return $this->request($key, ['controller'=>'invoice','action'=>'add'] + $payload);
+    }
+
+    public function showInvoice(#[\SensitiveParameter] string $key, string $identifier): HttpResponse
+    {
+        if (!preg_match('/^[1-9][0-9]{0,17}$/D', $identifier)) {
+            throw new WeFactException('Ongeldige lokale WeFact-identiteit.', 'identifier');
+        }
+        return $this->request($key, ['controller'=>'invoice', 'action'=>'show', 'Identifier'=>(int)$identifier]);
     }
 
     private function request(#[\SensitiveParameter] string $key, array $payload): HttpResponse

@@ -183,7 +183,9 @@ class InvoiceRepository
     public function history(): array
     {
         $joined="SELECT a.*,r.outcome,r.diagnostics_json,(SELECT count(*) FROM invoice_reconciliation_events e WHERE e.token_hash=a.token_hash AND e.operation='no_invoice') AS manual_resolved FROM invoice_actions a LEFT JOIN invoice_action_results r ON r.token_hash=a.token_hash ";
-        return ['tag_attempts'=>$this->pdo->query('SELECT * FROM toggl_tag_sync_attempts ORDER BY id DESC')->fetchAll(PDO::FETCH_ASSOC),
+        $remoteStatus = [];
+        foreach ($this->pdo->query('SELECT * FROM invoice_remote_status')->fetchAll(PDO::FETCH_ASSOC) as $row) { $remoteStatus[$row['invoice_id']] = $row; }
+        return ['remote_status'=>$remoteStatus, 'tag_attempts'=>$this->pdo->query('SELECT * FROM toggl_tag_sync_attempts ORDER BY id DESC')->fetchAll(PDO::FETCH_ASSOC),
             'invoices'=>$this->pdo->query("SELECT i.*,(SELECT count(*) FROM invoiced_entries e WHERE e.invoice_id=i.id AND e.released_at IS NULL) AS tag_total,(SELECT count(*) FROM invoiced_entries e WHERE e.invoice_id=i.id AND e.released_at IS NULL AND e.tag_synced=1) AS tag_synced_count,(SELECT count(*) FROM invoiced_entries e WHERE e.invoice_id=i.id AND e.released_at IS NULL AND e.tag_synced=0 AND e.tag_sync_state='failed') AS tag_failed_count,(SELECT count(*) FROM invoiced_entries e WHERE e.invoice_id=i.id AND e.released_at IS NULL AND e.tag_sync_state='unknown') AS tag_unknown_count FROM invoices i WHERE lifecycle='active' ORDER BY id DESC")->fetchAll(PDO::FETCH_ASSOC),
             'closed_invoices'=>$this->pdo->query("SELECT * FROM invoices WHERE lifecycle='manual_deleted_test' ORDER BY closed_at DESC")->fetchAll(PDO::FETCH_ASSOC),
             'uncertain'=>$this->pdo->query($joined."WHERE a.state='reconciliation_required' OR r.outcome='created_review' ORDER BY a.created_at DESC")->fetchAll(PDO::FETCH_ASSOC),

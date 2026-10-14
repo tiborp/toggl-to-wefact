@@ -8,9 +8,14 @@ $openActions=array_values(array_filter($history['uncertain'] ?? [],static fn($a)
 $createdReview=array_values(array_filter($history['uncertain'] ?? [],static fn($a)=>($a['outcome'] ?? '')==='created_review' && ($a['state'] ?? '')!=='reconciliation_required'));
 ?>
 <section class="panel" aria-labelledby="concept-invoices-title">
-<h2 id="concept-invoices-title">Conceptfacturen</h2>
-<div class="table-scroll"><table><thead><tr><th>Datum</th><th>Project</th><th>Debiteur</th><th>Conceptnummer / ID</th><th>Periode</th><th>Factureerbare uren</th><th>Bedrag excl. btw</th><th>Toggl-tags</th></tr></thead><tbody>
-<?php foreach($history['invoices'] as $invoice): ?><tr><td><?= View::escape(DutchDate::date($invoice['invoice_date'])) ?></td><td><?= View::escape($invoice['project_name']) ?><?php if (isset($invoice['id'])): ?><small><a href="/facturen/urenspecificatie?invoice_id=<?= (int)$invoice['id'] ?>">Urenspecificatie</a></small><?php endif; ?></td><td><?= View::escape($invoice['debtor_name']) ?></td><td><?= View::escape($invoice['wefact_invoice_code'].' / '.$invoice['wefact_invoice_id']) ?></td><td><?= View::escape(DutchDate::date($invoice['period_from']).' t/m '.DutchDate::date($invoice['period_to'])) ?></td><td><?= View::escape(Duration::hoursMinutes($invoice['billed_duration_seconds'] ?? $invoice['duration_seconds'])) ?><small>Werkelijk: <?= View::escape(Duration::exact($invoice['duration_seconds'])) ?></small></td><td><?= View::escape(HourlyRate::format($invoice['amount_excl_cents'])) ?></td><td>
+<h2 id="concept-invoices-title">Facturen</h2>
+<?php if (($history['invoices'] ?? []) !== []): ?>
+<form method="post" action="/facturen"><input type="hidden" name="csrf" value="<?= View::escape($csrf ?? '') ?>"><input type="hidden" name="action" value="refresh_status"><button type="submit">Status bijwerken</button></form>
+<?php endif; ?>
+<div class="table-scroll"><table><thead><tr><th>Datum</th><th>Project</th><th>Debiteur</th><th>Factuurnummer / ID</th><th>WeFact-status</th><th>Periode</th><th>Factureerbare uren</th><th>Bedrag excl. btw</th><th>Toggl-tags</th></tr></thead><tbody>
+<?php foreach($history['invoices'] as $invoice): $remote = $history['remote_status'][$invoice['id'] ?? 0] ?? null; ?><tr><td><?= View::escape(DutchDate::date($invoice['invoice_date'])) ?></td><td><?= View::escape($invoice['project_name']) ?><?php if (isset($invoice['id'])): ?><small><a href="/facturen/urenspecificatie?invoice_id=<?= (int)$invoice['id'] ?>">Urenspecificatie</a></small><?php endif; ?></td><td><?= View::escape($invoice['debtor_name']) ?></td><td><?= View::escape(($remote['invoice_code'] ?? $invoice['wefact_invoice_code']).' / '.$invoice['wefact_invoice_id']) ?></td><td>
+<?php require __DIR__.'/invoice_remote_status.php'; ?>
+</td><td><?= View::escape(DutchDate::date($invoice['period_from']).' t/m '.DutchDate::date($invoice['period_to'])) ?></td><td><?= View::escape(Duration::hoursMinutes($invoice['billed_duration_seconds'] ?? $invoice['duration_seconds'])) ?><small>Werkelijk: <?= View::escape(Duration::exact($invoice['duration_seconds'])) ?></small></td><td><?= View::escape(HourlyRate::format($invoice['amount_excl_cents'])) ?></td><td>
 <?php if(isset($invoice['tag_total'])): ?>
 Toggl: <?= (int)$invoice['tag_synced_count'] ?>/<?= (int)$invoice['tag_total'] ?> gesynchroniseerd
 <?php if($invoice['tag_synced_count']<$invoice['tag_total']): ?>

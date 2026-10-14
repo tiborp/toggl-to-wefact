@@ -4,7 +4,7 @@ namespace App\WeFact;
 
 use JsonException;
 
-/** Validates debtor pagination and classifies draft creation as confirmed, rejected or uncertain. */
+/** Validates debtor/status reads and classifies draft creation as confirmed, rejected or uncertain. */
 final class WeFactClient
 {
     public const PAGE_SIZE = 1000;
@@ -143,6 +143,51 @@ final class WeFactClient
             $this->invoiceDiagnostics['exception_class']=get_class($e);
             throw new WeFactException('WeFact meldde succes, maar factuurvelden konden niet veilig worden gevalideerd. Handmatige controle vereist.','response_validation',true,true,'unknown',$this->invoiceDiagnostics);
         }
+    }
+
+    /**
+     * Read one stored remote identity without retries. Failures never imply a local lifecycle change.
+     * @return array Normalized nullable remote fields, with exact integer cent amounts.
+     * @throws WeFactException On access, transport or invalid response; no raw API errors are exposed.
+     */
+    public function invoiceStatus(string $identifier): array
+    {
+        if (trim($this->key) === '') { throw new WeFactException('WEFACT_API_KEY ontbreekt.', 'missing_key'); }
+        if (!$this->http instanceof InvoiceReadTransport || !preg_match('/^[1-9][0-9]{0,17}$/D', $identifier)) {
+            throw new WeFactException('Ongeldige lokale WeFact-identiteit of leestransport.', 'identifier');
+        }
+        $this->requests++;
+        $response = $this->http->showInvoice($this->key, $identifier);
+        $this->connected = true;
+        if ($response->status === 429) { throw new WeFactException('WeFact-verzoeklimiet bereikt. Probeer later opnieuw.', 'rate_limit', true); }
+        if (in_array($response->status, [401, 403], true)) { $this->denied([]); }
+        // Preserve the decimal lexemes before json_decode could turn monetary numbers into floats.
+        $body = preg_replace('/"(AmountIncl|AmountPaid|AmountOutstanding)"\s*:\s*(-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?)(?=\s*[,}])/', '"$1":"$2"', $response->body);
+        try { $data = json_decode($body, true, 512, JSON_THROW_ON_ERROR | JSON_BIGINT_AS_STRING); }
+        catch (JsonException) { throw new WeFactException('WeFact gaf geen geldige factuurresponse.', 'json', true); }
+        if (!is_array($data)) { throw new WeFactException('WeFact gaf een onverwachte factuurresponse.', 'response', true); }
+        if (($data['status'] ?? null) === 'error') {
+            $errors = $data['errors'] ?? [];
+            $text = is_array($errors) ? implode(' ', array_filter($errors, 'is_string')) : (is_string($errors) ? $errors : '');
+            $text = str_replace([$this->key, base64_encode($this->key)], '', $text);
+            if (preg_match('/too many requests|rate[ -]?limit|requestlimiet|verzoeklimiet/i', $text)) {
+                throw new WeFactException('WeFact-verzoeklimiet bereikt. Probeer later opnieuw.', 'rate_limit', true);
+            }
+            $this->denied($data);
+        }
+        if ($response->status !== 200) { throw new WeFactException('WeFact gaf een HTTP-fout bij de statuscontrole.', 'http', true); }
+        if (($data['status'] ?? null) !== 'success' || ($data['controller'] ?? null) !== 'invoice'
+            || ($data['action'] ?? null) !== 'show' || !is_array($data['invoice'] ?? null)) {
+            throw new WeFactException('WeFact gaf een onverwachte factuurresponse.', 'response', true);
+        }
+        try { $snapshot = InvoiceStatusSnapshot::parse($data['invoice'], $identifier); }
+        catch (\Throwable) { throw new WeFactException('WeFact-factuurvelden konden niet veilig worden gevalideerd.', 'response_validation', true); }
+        // Do not allow an echoed credential into a persistent display field.
+        foreach (['invoice_code', 'sub_status'] as $field) {
+            if (is_string($snapshot[$field])) { $snapshot[$field] = str_replace([$this->key, base64_encode($this->key)], '[afgeschermd]', $snapshot[$field]); }
+        }
+        $this->authenticated = true;
+        return $snapshot;
     }
 
     private function debtor(mixed $row): array

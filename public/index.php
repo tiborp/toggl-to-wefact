@@ -56,7 +56,12 @@ try {
     $confirmation = new \App\Invoice\ConfirmationController($app['config'], $view, $invoiceService, $invoiceRepo, $syncTags);
     $router->get('/concept-bevestigen', fn () => $confirmation->handle());
     $router->post('/concept-bevestigen', fn () => $confirmation->handle());
-    $history = new \App\Invoice\HistoryController($app['config'], $view, $invoiceRepo, $syncTags);
+    $refreshStatus = fn () => (new \App\Invoice\RemoteStatusService(
+        new \App\Invoice\RemoteStatusRepository($app['pdo']),
+        new \App\WeFact\WeFactClient($app['config']->wefactKey(), new \App\WeFact\CurlTransport()),
+        hash('sha256', $app['config']->wefactKey().':'.$app['config']->togglToken())
+    ))->refresh();
+    $history = new \App\Invoice\HistoryController($app['config'], $view, $invoiceRepo, $syncTags, $refreshStatus);
     $router->get('/facturen', fn () => $history->handle());
     $router->post('/facturen', fn () => $history->handle());
     $specification = new \App\Invoice\SpecificationController($app['config'], $view, new \App\Invoice\Specification($app['pdo']));
